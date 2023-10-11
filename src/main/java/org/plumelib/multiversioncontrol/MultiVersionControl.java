@@ -28,10 +28,6 @@ import org.checkerframework.checker.index.qual.GTENegativeOne;
 import org.checkerframework.checker.initialization.qual.Initialized;
 import org.checkerframework.checker.initialization.qual.UnknownInitialization;
 import org.checkerframework.checker.lock.qual.GuardSatisfied;
-import org.checkerframework.checker.nullness.qual.EnsuresNonNull;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.checkerframework.checker.nullness.qual.RequiresNonNull;
 import org.checkerframework.checker.regex.qual.Regex;
 import org.checkerframework.common.initializedfields.qual.EnsuresInitializedFields;
 import org.checkerframework.common.value.qual.MinLen;
@@ -543,10 +539,10 @@ public class MultiVersionControl {
   }
 
   /** Nullary constructor for use by OptionsDoclet. */
-  @SuppressWarnings({
-    "nullness", // initialization warning in unused constructor
-    "initializedfields:contracts.postcondition" // initialization warning in unused constructor
-  })
+  // @SuppressWarnings({
+  //   "nullness", // initialization warning in unused constructor
+  //   "initializedfields:contracts.postcondition" // initialization warning in unused constructor
+  // })
   private MultiVersionControl() {}
 
   /**
@@ -564,8 +560,6 @@ public class MultiVersionControl {
    * @param args the command-line arguments
    * @see MultiVersionControl
    */
-  @RequiresNonNull({"dir", "checkouts"})
-  @EnsuresNonNull("action")
   @EnsuresInitializedFields(fields = "action")
   public void parseArgs(@UnknownInitialization MultiVersionControl this, String[] args) {
     @SuppressWarnings(
@@ -671,13 +665,13 @@ public class MultiVersionControl {
      *
      * <p>Most operations don't need this. It is needed for checkout, though.
      */
-    @Nullable String repository;
+    String repository;
 
     /**
      * Null if no module, just whole thing. Non-null for CVS and, optionally, for SVN. Null for
      * distributed version control systems (Bzr, Git, Hg).
      */
-    @Nullable String module;
+    String module;
 
     /**
      * Create a Checkout.
@@ -698,7 +692,7 @@ public class MultiVersionControl {
      * @param module the module that is checked out (for CVS and optionally SVN)
      */
     Checkout(
-        RepoType repoType, File directory, @Nullable String repository, @Nullable String module) {
+        RepoType repoType, File directory, String repository, String module) {
       // Directory might not exist if we are running the checkout command.
       // If it exists, it must be a directory.
       assert (directory.exists() ? directory.isDirectory() : true)
@@ -771,7 +765,7 @@ public class MultiVersionControl {
 
     @Override
     @Pure
-    public boolean equals(@GuardSatisfied Checkout this, @GuardSatisfied @Nullable Object other) {
+    public boolean equals(@GuardSatisfied Checkout this, @GuardSatisfied Object other) {
       if (!(other instanceof Checkout)) {
         return false;
       }
@@ -1049,7 +1043,7 @@ public class MultiVersionControl {
       "nullness" // dependent: listFiles => non-null because dir is a directory, and
       // the checker doesn't know that checkouts.add etc do not affect dir
     })
-    File @NonNull [] childdirs = dir.listFiles(idf);
+    File  [] childdirs = dir.listFiles(idf);
     if (childdirs == null) {
       System.err.printf(
           "childdirs is null (permission or other I/O problem?) for %s%n", dir.toString());
@@ -1106,7 +1100,7 @@ public class MultiVersionControl {
       return;
     }
     String pathInRepo = FilesPlume.readFile(repositoryFile).trim();
-    @NonNull File repoFileRoot = new File(pathInRepo);
+     File repoFileRoot = new File(pathInRepo);
     while (repoFileRoot.getParentFile() != null) {
       repoFileRoot = repoFileRoot.getParentFile();
     }
@@ -1181,7 +1175,7 @@ public class MultiVersionControl {
    * @param parentDir a directory containing a {@code .svn} subdirectory
    * @return a SVN checkout for the directory, or null
    */
-  static @Nullable Checkout dirToCheckoutSvn(File parentDir) {
+  static  Checkout dirToCheckoutSvn(File parentDir) {
 
     // For SVN, do
     //   svn info
@@ -1195,7 +1189,7 @@ public class MultiVersionControl {
     //   might be slow for large checkouts).
 
     @SuppressWarnings("nullness") // unannotated library: SVNKit
-    SVNWCClient wcClient = new SVNWCClient((@Nullable ISVNAuthenticationManager) null, null);
+    SVNWCClient wcClient = new SVNWCClient(( ISVNAuthenticationManager) null, null);
     SVNInfo info;
     try {
       info = wcClient.doInfo(new File(parentDir.toString()), SVNRevision.WORKING);
@@ -1274,10 +1268,10 @@ public class MultiVersionControl {
   /** A pair of two files. */
   static class FilePair {
     /** The first file. */
-    final @Nullable File file1;
+    final  File file1;
 
     /** The second file. */
-    final @Nullable File file2;
+    final  File file2;
 
     /**
      * Create a FilePair.
@@ -1285,7 +1279,7 @@ public class MultiVersionControl {
      * @param file1 the first file
      * @param file2 the second file
      */
-    FilePair(@Nullable File file1, @Nullable File file2) {
+    FilePair( File file1,  File file2) {
       this.file1 = file1;
       this.file2 = file2;
     }
@@ -1889,7 +1883,7 @@ public class MultiVersionControl {
   // This implementation is not quite right because we didn't look for the
   // [path] section.  We could fix this by using a real ini reader or
   // calling "hg showconfig".  This hack is good enough for now.
-  private @Nullable String defaultPath(File dir) {
+  private String defaultPath(File dir) {
     File hgrc = new File(new File(dir, ".hg"), "hgrc");
     try (EntryReader er = new EntryReader(hgrc, "^#.*", null)) {
       for (String line : er) {
@@ -1965,7 +1959,7 @@ public class MultiVersionControl {
     DefaultExecuteResultHandler resultHandler = new DefaultExecuteResultHandler();
     DefaultExecutor executor = new DefaultExecutor();
     @SuppressWarnings("nullness") // defaults to non-null and was never reset
-    @NonNull File defaultDirectory = pb.directory();
+    File defaultDirectory = pb.directory();
     executor.setWorkingDirectory(defaultDirectory);
 
     ExecuteWatchdog watchdog = new ExecuteWatchdog(timeout * 1000L);
