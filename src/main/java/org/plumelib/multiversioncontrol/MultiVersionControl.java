@@ -1,5 +1,8 @@
 package org.plumelib.multiversioncontrol;
 
+import org.checkerframework.dataflow.qual.Impure;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.BufferedReader;
@@ -455,7 +458,7 @@ public class MultiVersionControl {
   private static Action LIST = Action.LIST;
 
   /** Which action to perform on this run of MultiVersionControl. */
-  private Action action;
+  private @MonotonicNonNull Action action;
 
   /**
    * Replace "~" by the expansion of "$HOME".
@@ -463,7 +466,8 @@ public class MultiVersionControl {
    * @param path the input path, which might contain "~"
    * @return path with "~" expanded
    */
-  private static String expandTilde(String path) {
+  @SideEffectFree
+  private static String expandTilde(@Nullable String path) {
     return path.replaceFirst("^~", home);
   }
 
@@ -474,6 +478,7 @@ public class MultiVersionControl {
    * @param args the command-line arguments
    * @see MultiVersionControl
    */
+  @Impure
   public static void main(String[] args) {
     setupSvnkit();
     MultiVersionControl mvc = new MultiVersionControl(args);
@@ -532,6 +537,7 @@ public class MultiVersionControl {
   }
 
   /** Set up the SVNKit library. */
+  @Impure
   private static void setupSvnkit() {
     DAVRepositoryFactory.setup();
     SVNRepositoryFactoryImpl.setup();
@@ -543,6 +549,7 @@ public class MultiVersionControl {
   //   "nullness", // initialization warning in unused constructor
   //   "initializedfields:contracts.postcondition" // initialization warning in unused constructor
   // })
+  @SideEffectFree
   private MultiVersionControl() {}
 
   /**
@@ -550,6 +557,7 @@ public class MultiVersionControl {
    *
    * @param args the command-line arguments to MultiVersionControl
    */
+  @Impure
   public MultiVersionControl(String[] args) {
     parseArgs(args);
   }
@@ -560,6 +568,7 @@ public class MultiVersionControl {
    * @param args the command-line arguments
    * @see MultiVersionControl
    */
+  @Impure
   @EnsuresInitializedFields(fields = "action")
   public void parseArgs(@UnknownInitialization MultiVersionControl this, String[] args) {
     @SuppressWarnings(
@@ -679,6 +688,7 @@ public class MultiVersionControl {
      * @param repoType the type of repository
      * @param directory where the new clone will appear
      */
+    @Impure
     Checkout(RepoType repoType, File directory) {
       this(repoType, directory, null, null);
     }
@@ -691,8 +701,9 @@ public class MultiVersionControl {
      * @param repository the upstream repository
      * @param module the module that is checked out (for CVS and optionally SVN)
      */
+    @Impure
     Checkout(
-        RepoType repoType, File directory, String repository, String module) {
+        RepoType repoType, File directory, @Nullable String repository, @Nullable String module) {
       // Directory might not exist if we are running the checkout command.
       // If it exists, it must be a directory.
       assert (directory.exists() ? directory.isDirectory() : true)
@@ -744,6 +755,7 @@ public class MultiVersionControl {
        *
        * @param msg a message about the missing directory
        */
+      @SideEffectFree
       DirectoryDoesNotExist(String msg) {
         super(msg);
       }
@@ -755,6 +767,7 @@ public class MultiVersionControl {
      * @param directory the directory
      * @param subdirName a subdirectory that must exist, if {@code directory} exists
      */
+    @Impure
     private static void assertSubdirExists(File directory, String subdirName) {
       if (directory.exists() && !new File(directory, subdirName).isDirectory()) {
         throw new DirectoryDoesNotExist(
@@ -765,7 +778,7 @@ public class MultiVersionControl {
 
     @Override
     @Pure
-    public boolean equals(@GuardSatisfied Checkout this, @GuardSatisfied Object other) {
+    public boolean equals(@GuardSatisfied Checkout this, @GuardSatisfied @Nullable Object other) {
       if (!(other instanceof Checkout)) {
         return false;
       }
@@ -781,6 +794,7 @@ public class MultiVersionControl {
       return Objects.hash(repoType, canonicalDirectory, module);
     }
 
+    @Pure
     @Override
     @SideEffectFree
     public String toString(@GuardSatisfied Checkout this) {
@@ -801,6 +815,7 @@ public class MultiVersionControl {
    *     cofiguration file
    * @throws IOException if there is trouble reading the file (or file sysetm?)
    */
+  @Impure
   @SuppressWarnings({
     "StringSplitter" // don't add dependence on Guava
   })
@@ -914,6 +929,7 @@ public class MultiVersionControl {
           String dirName = dir.getName();
           FileFilter namePrefixFilter =
               new FileFilter() {
+                @SideEffectFree
                 @Override
                 public boolean accept(File file) {
                   return file.isDirectory() && file.getName().startsWith(dirName);
@@ -992,6 +1008,7 @@ public class MultiVersionControl {
    * @param checkouts the set to populate; is side-effected by this method
    * @param ignoreDirs directories not to search within
    */
+  @Impure
   private static void findCheckouts(File dir, Set<Checkout> checkouts, List<File> ignoreDirs) {
     if (!dir.isDirectory()) {
       // This should never happen, unless the directory is deleted between
@@ -1052,6 +1069,7 @@ public class MultiVersionControl {
     Arrays.sort(
         childdirs,
         new Comparator<File>() {
+          @SideEffectFree
           @Override
           public int compare(File o1, File o2) {
             return o1.getName().compareTo(o2.getName());
@@ -1065,8 +1083,10 @@ public class MultiVersionControl {
   /** Accept only directories that are not symbolic links. */
   static class IsDirectoryFilter implements FileFilter {
     /** Creates a new IsDirectoryFilter. */
+    @SideEffectFree
     public IsDirectoryFilter() {}
 
+    @Impure
     @Override
     public boolean accept(File pathname) {
       try {
@@ -1090,6 +1110,7 @@ public class MultiVersionControl {
    * @param parentDir its parent
    * @param checkouts the set to populate; is side-effected by this method
    */
+  @Impure
   static void addCheckoutCvs(File cvsDir, File parentDir, Set<Checkout> checkouts) {
     assert cvsDir.getName().toString().equals("CVS") : cvsDir.getName();
     // relative path within repository
@@ -1131,6 +1152,7 @@ public class MultiVersionControl {
    * @param parentDir its parent
    * @return a Checkout for the {@code .hg} directory
    */
+  @Impure
   static Checkout dirToCheckoutHg(File hgDir, File parentDir) {
     String repository = null;
 
@@ -1162,6 +1184,7 @@ public class MultiVersionControl {
    * @param parentDir its parent
    * @return a Checkout for the {@code .git} directory
    */
+  @Impure
   static Checkout dirToCheckoutGit(File gitDir, File parentDir) {
     String repository = UtilPlume.backticks("git", "config", "remote.origin.url");
 
@@ -1175,7 +1198,8 @@ public class MultiVersionControl {
    * @param parentDir a directory containing a {@code .svn} subdirectory
    * @return a SVN checkout for the directory, or null
    */
-  static  Checkout dirToCheckoutSvn(File parentDir) {
+  @Impure
+  static  @Nullable Checkout dirToCheckoutSvn(File parentDir) {
 
     // For SVN, do
     //   svn info
@@ -1279,7 +1303,8 @@ public class MultiVersionControl {
      * @param file1 the first file
      * @param file2 the second file
      */
-    FilePair( File file1,  File file2) {
+    @SideEffectFree
+    FilePair( @Nullable File file1,  @Nullable File file2) {
       this.file1 = file1;
       this.file2 = file2;
     }
@@ -1298,6 +1323,7 @@ public class MultiVersionControl {
    * @return p1 and p2, relative to their largest common prefix (modulo {@code p2Limit} and {@code
    *     p1Contains})
    */
+  @Impure
   static FilePair removeCommonSuffixDirs(File p1, File p2, File p2Limit, String p1Contains) {
     if (debug) {
       System.out.printf("removeCommonSuffixDirs(%s, %s, %s, %s)%n", p1, p2, p2Limit, p1Contains);
@@ -1331,6 +1357,7 @@ public class MultiVersionControl {
    * @param pb the ProcessBuilder to modify
    * @param arg the argument to add to {@code pb}'s command
    */
+  @Impure
   private void addArg(ProcessBuilder pb, String arg) {
     List<String> command = pb.command();
     command.add(arg);
@@ -1343,6 +1370,7 @@ public class MultiVersionControl {
    * @param pb the ProcessBuilder to modify
    * @param args the arguments to add to {@code pb}'s command
    */
+  @Impure
   private void addArgs(ProcessBuilder pb, List<String> args) {
     List<String> command = pb.command();
     command.addAll(args);
@@ -1366,6 +1394,7 @@ public class MultiVersionControl {
      * @param regexp the regular expression matching text that should be replaced
      * @param replacement the replacement text
      */
+    @SideEffectFree
     public Replacer(@Regex String regexp, String replacement) {
       this.regexp = Pattern.compile(regexp);
       this.replacement = replacement;
@@ -1378,6 +1407,7 @@ public class MultiVersionControl {
      * @param s the string in which to perform replacements
      * @return the string, after replacements have been performed
      */
+    @Impure
     public String replaceAll(String s) {
       Matcher matcher = regexp.matcher(s);
       return matcher.replaceAll(replacement);
@@ -1389,6 +1419,7 @@ public class MultiVersionControl {
    *
    * @param checkouts the clones and checkouts to process
    */
+  @Impure
   public void process(Set<Checkout> checkouts) {
     // Always run at least one command, but sometimes up to three.
     ProcessBuilder pb = new ProcessBuilder("");
@@ -1883,7 +1914,8 @@ public class MultiVersionControl {
   // This implementation is not quite right because we didn't look for the
   // [path] section.  We could fix this by using a real ini reader or
   // calling "hg showconfig".  This hack is good enough for now.
-  private String defaultPath(File dir) {
+  @Impure
+  private @Nullable String defaultPath(File dir) {
     File hgrc = new File(new File(dir, ".hg"), "hgrc");
     try (EntryReader er = new EntryReader(hgrc, "^#.*", null)) {
       for (String line : er) {
@@ -1909,6 +1941,7 @@ public class MultiVersionControl {
    * @param dir the directory to test
    * @return true if there is an invalid certificate for the given directory
    */
+  @Impure
   private boolean invalidCertificate(File dir) {
     String defaultPath = defaultPath(dir);
     if (debug) {
@@ -1930,6 +1963,7 @@ public class MultiVersionControl {
    *     normally. Ordinarily, output is displayed only if the process completed erroneously.
    * @return the status code: 0 for normal completion, non-zero for erroneous completion
    */
+  @Impure
   int perform_command(ProcessBuilder pb, List<Replacer> replacers, boolean showNormalOutput) {
     if (show) {
       System.out.println(command(pb));
@@ -2074,6 +2108,7 @@ public class MultiVersionControl {
    * @param pb the process whose command to return
    * @return the shell command for the process
    */
+  @Impure
   String command(ProcessBuilder pb) {
     return "  cd " + pb.directory() + "\n  " + StringsPlume.join(" ", pb.command());
   }
@@ -2084,8 +2119,10 @@ public class MultiVersionControl {
    */
   static class StreamOfNewlines extends InputStream {
     /** Creates a new StreamOfNewlines. */
+    @Impure
     public StreamOfNewlines() {}
 
+    @Pure
     @Override
     public @GTENegativeOne int read() {
       return (int) '\n';
